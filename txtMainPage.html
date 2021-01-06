@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<!--
+    FILE: txtMainPage.html
+    PROJECT: Creating a Basic Text Editor using jQuery and JSON
+    PROGRAMMER: Jessica Sim
+    FIRST VERSION: 2020-12-04
+    DESCRIPTION: 
+        This script is the html page of Text Editor using jQuery and JSON. In this text editor,
+        it has save and save as ability. Also, we can see the list of files which is in directory called "MyFiles".
+        If user click one of the file in the dropdown list, it will show the contents of the file in the text editor.
+        With 'save' ability, user can change the content of the existing file and create a new file with 'save as' option. 
+        When the user requested a action, it sends the request to server using jQuery to make an AJAX call.
+-->
+<html>
+<head>
+<title> Text Editor </title>
+<link rel="stylesheet" type="text/css" href="cssFile.css" />
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script type = "text/javascript">
+
+var JSONObject;
+let fileList;
+var selectedFile;
+var file;
+var content;
+var changeFileContent;
+var save;
+var saveFile;
+
+
+/*
+    FUNCTION: *no function name
+    DESCRIPTION:
+        after the DOM(Document Object Model) is all loaded, all the events under this will be ready
+        to execute for certain cases
+    PARAMETERS: 
+        no parameters
+    RETURNS:
+        there's no return values
+*/
+$(document).ready(function()
+{
+    /*
+        FUNCTION: *no function name
+        DESCRIPTION:
+            Requests for all file names in directory called "MyFiles". The request method is GET and sends to "serverSide.php" server.
+            When the request has succeeded, it parses the data which is passed from server and put those in the dropdown list.
+        PARAMETERS: 
+            no parameters
+        RETURNS:
+            displays the file names in the dropdown list
+    */
+    $.ajax({type: "GET",
+            url: "serverSide.php",
+            dataType: "text",
+            data: null,
+            contentType:"application/json",
+            success: function(result){
+                fileList = JSON.parse(result);
+                $.each(fileList, function(i, field)
+                {
+                    $('#files').append($('<option>', { value : field }).text(field.name));
+                })
+            },
+            error: function(xhr, status, error) {
+                document.getElementById("errSave").innerHTML=error;
+            }
+        });
+        /*
+            FUNCTION: *no function name
+            DESCRIPTION:
+                If the one of the dropdown list is clicked, take the file name which is selected, stringify the data and send it to server.
+                When the request has succeeded, it parses the data which is come from server and displays it to the textbox in the page.
+            PARAMETERS: 
+                no parameters
+            RETURNS:
+                displays the file content in the textbox
+        */
+        $("#files").change(function()
+        {
+            document.getElementById("success").innerHTML="";
+            document.getElementById("err").innerHTML="";
+            document.getElementById("errSave").innerHTML="";
+            document.getElementById("successSave").innerHTML="";
+            selectedFile =  $("#files option:selected").text();
+            if(selectedFile === "=== select ===")
+            {
+                return;
+            }
+            file = JSON.stringify(selectedFile);
+            $.ajax({type: "POST",
+            url: "serverSide.php",
+            data: file,
+            dataType: "text",
+            contentType:"application/json",
+            success: function(response){
+                data = JSON.parse(response);
+                $("#textbox").val(data);
+            },
+            error: function(xhr, status, error) {
+                document.getElementById("errSave").innerHTML=error;
+            }
+        });
+        })
+        /*
+            FUNCTION: *no function name
+            DESCRIPTION:
+                If "save" button is clicked, it gets the content from the textbox and get the file name which is selected in the dropdown list.
+                Before it sends to the server, stringify them. But if no file is selected in the dropdown list, it alerts the user that
+                he/she has to choose one of the file before "save". When the request has succeeded, it alerts the user to let them know 
+                successfully saved the file. If it failed, it alerts the error message to the user.
+            PARAMETERS: 
+                no parameters
+            RETURNS:
+                alerts the user that file is successfully saved
+        */
+        $("#save").click(function(){
+            document.getElementById("success").innerHTML="";
+            document.getElementById("err").innerHTML="";
+            document.getElementById("errSave").innerHTML="";
+            document.getElementById("successSave").innerHTML="";
+            content = document.getElementById("textbox").value;
+            changeFileContent =  $("#files option:selected").text();
+            if(changeFileContent === "=== select ===")
+            {
+                document.getElementById("errSave").innerHTML="**Please select one file in dropdown list that you want to make changes**";
+                return;
+            }
+            else
+            {
+                save = {fName: changeFileContent, content: content, cmd: 1};
+                saveFile = JSON.stringify(save);
+                $.ajax({type: "POST",
+                url: "serverSide.php",
+                data: saveFile,
+                dataType: "text",
+                contentType:"application/json",
+                success: function(response){
+                    document.getElementById("successSave").innerHTML = response;
+                },
+                error: function(xhr, status, error) {
+                    document.getElementById("errSave").innerHTML=error;
+                }
+                });
+            }
+        })
+        /*
+            FUNCTION: *no function name
+            DESCRIPTION:
+                If "saveAs" button is clicked, it gets the content from the textbox and get the file name which specified in the textblock.
+                Before it sends to the server, stringify them. But if user didn't provide the file name in the text block, it alerts the user that
+                he/she has specify the file name that he/she wants to create as. Also, if user provided the file name without the file extension,
+                it alerts the user that they have to specify the file name with the extension. When the request has succeeded, it alerts the user to let them know 
+                successfully created and saved the file. If it failed, it alerts the error message to the user.
+            PARAMETERS: 
+                no parameters
+            RETURNS:
+                alerts the user that file is successfully created and saved
+        */
+        $("#saveAs").click(function(){
+            document.getElementById("success").innerHTML="";
+            document.getElementById("err").innerHTML="";
+            document.getElementById("errSave").innerHTML="";
+            document.getElementById("successSave").innerHTML="";
+            var filename = document.getElementById("txtFileName").value;
+            var content = document.getElementById("textbox").value;
+            if((filename.trim()).length == 0)
+            {
+                document.getElementById("err").innerHTML="**Please specify the file name at the left hand side of 'save as' button!**";
+                return;
+            }
+            var n = filename.indexOf(".");
+            if(n == -1)
+            {
+                document.getElementById("err").innerHTML="**You haven't specified FILE EXTENSION. Please specify the extension of the file!**";
+                return;
+            }
+            else
+            {
+                var saveAs = {fnameSaveAs: filename, contentSaveAs: content, cmd: 2};
+                var saveAsFile = JSON.stringify(saveAs);
+                $.ajax({type: "POST",
+                    url: "serverSide.php",
+                    data: saveAsFile,
+                    dataType: "text",
+                    contentType:"application/json",
+                    success: function(response){
+                        var select = document.getElementById("files");
+                        var length = select.options.length;
+                        for (i = length-1; i >= 0; i--) {
+                            select.options[i] = null;
+                        }
+                        var fileNameAndSuccess = JSON.parse(response);
+                        document.getElementById("success").innerHTML = fileNameAndSuccess.success;
+                        $('#files').append($('<option value="none">=== select ===</option>'));
+                        $.each(fileNameAndSuccess.newFile, function(i, field)
+                        {
+                            if(field === filename)
+                            {
+                                $('#files').append($('<option selected>', { i : field }).text(field));
+                            }
+                            else
+                            {
+                                $('#files').append($('<option>', { i : field }).text(field));
+                            }
+                        })
+                        document.getElementById("txtFileName").value = "";
+                        },
+                        error: function(xhr, status, error) {
+                            document.getElementById("err").innerHTML= error;
+                    }
+                });
+            }
+        })
+})
+</script>
+</head>
+<body>
+        <main>
+        <h2 id="welcomeLabel" style="text-align: center;">Welcome to Text Editor using jQuery and JSON</h2>
+        <img src="img/textEditor.png" alt="txtEditor" width="40" height="40"/>
+        <br/>
+        <hr class="hrDesign">
+        <br/>
+        <label for= "selectFile" id="fileLabel" style="display: block; text-align: center;">Please select one of the file you want to see!</label>
+        <br/>
+            <select class="dropDown" name= "files" id="files" style="margin-left: 45%; text-align-last:center;">
+                <option value="none" selected>=== select ===</option>
+            </select>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="submit" class="btnDesign" id="save" value="Save"/>
+            <div id="errSave" type="label" style="color:red;text-align: center;font-weight: bold;"></div>
+            <div id="successSave" type="label" style="color:purple;text-align: center;font-weight: bold;"></div>
+        <br/>
+        <div class="container">
+            <textarea id="textbox" name="textbox" rows="15" cols="80"></textarea>
+            <br/><br/><br/>
+            <div class ="center">
+                <input type="text" style="text-align: center; border-radius: 4px;" id="txtFileName" placeholder="File Name"/>
+                &nbsp;&nbsp;
+                <input type="submit" class="btnDesign" id="saveAs" value="Save As"/>
+            </div>
+        </div>
+        <br/>
+            <div id="err" type="label" style="color:red;text-align: center;font-weight: bold;"></div>
+            <div id="success" type="label" style="color:purple; text-align: center;font-weight: bold;"></div>  
+        </main>
+</body>
+
+</html>
